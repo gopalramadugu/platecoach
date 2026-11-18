@@ -1,0 +1,552 @@
+<!DOCTYPE html>
+<html lang="en"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes"><meta name="theme-color" content="#1f5c3f">
+<title>Plate Coach</title>
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:wght@400;600;800&display=swap" rel="stylesheet">
+<style>
+:root{--bg:#f1f5ef;--card:#fff;--ink:#14281f;--mut:#5d6f64;--line:#dce5da;--pri:#1f5c3f;--onpri:#fff;--gold:#f2b632;--warn:#b3431f;--tip:#fff6dc;--tipb:#e8c766}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#0f1a14;--card:#182720;--ink:#e8f0ea;--mut:#98ab9f;--line:#2a3d33;--pri:#5fc08c;--onpri:#0f1a14;--warn:#f08a62;--tip:#2b2610;--tipb:#6b5a1c}}
+:root[data-theme="dark"]{--bg:#0f1a14;--card:#182720;--ink:#e8f0ea;--mut:#98ab9f;--line:#2a3d33;--pri:#5fc08c;--onpri:#0f1a14;--warn:#f08a62;--tip:#2b2610;--tipb:#6b5a1c}
+:root{box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+html{scroll-padding-top:env(safe-area-inset-top,0px)}
+*,*::before,*::after{box-sizing:inherit}
+body{margin:0;background:var(--bg);color:var(--ink);font:15px/1.45 "Bricolage Grotesque",system-ui,-apple-system,Segoe UI,sans-serif;max-width:640px;margin:0 auto;padding:0 14px 96px}
+h1{font-size:26px;font-weight:800;margin:14px 0 2px;letter-spacing:-.5px}h2{font-size:17px;margin:0;font-weight:800}
+.sub{color:var(--mut);font-size:13px}
+.card{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:14px;margin:12px 0}
+button{font:inherit;color:inherit;cursor:pointer}
+.btn{background:var(--pri);color:var(--onpri);border:0;border-radius:10px;padding:9px 14px;font-weight:600}
+.ghost{background:none;border:1px solid var(--line);border-radius:10px;padding:7px 11px}
+.row{display:flex;align-items:center;gap:8px}.sp{justify-content:space-between}
+.bar{height:9px;background:var(--line);border-radius:6px;overflow:hidden;margin:4px 0 10px}.bar i{display:block;height:100%;background:var(--pri);border-radius:6px}.bar i.w{background:var(--warn)}.bar i.g{background:var(--gold)}
+.tip{background:var(--tip);border:1px solid var(--tipb);border-radius:12px;padding:11px 13px;margin:10px 0}.tip b{display:block;margin-bottom:3px}
+.item{display:flex;justify-content:space-between;gap:8px;padding:8px 0;border-top:1px solid var(--line)}.item small{color:var(--mut)}
+.x{border:0;background:none;color:var(--mut);font-size:18px}
+nav{position:fixed;left:0;right:0;bottom:0;background:var(--card);border-top:1px solid var(--line);display:flex;justify-content:center;padding:6px 8px calc(6px + env(safe-area-inset-bottom,0px));gap:6px;z-index:5}
+nav button{flex:1;max-width:150px;border:0;background:none;padding:9px;border-radius:10px;font-weight:600;color:var(--mut)}nav button.on{background:var(--pri);color:var(--onpri)}
+.sheet{position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:9;display:flex;align-items:flex-end;justify-content:center}
+.sheet>div{background:var(--bg);width:100%;max-width:640px;max-height:88%;overflow:auto;border-radius:18px 18px 0 0;padding:14px 14px calc(18px + env(safe-area-inset-bottom,0px))}
+input,select{font:inherit;color:var(--ink);background:var(--card);border:1px solid var(--line);border-radius:10px;padding:9px;width:100%}
+.food{display:flex;justify-content:space-between;padding:9px 4px;border-bottom:1px solid var(--line);cursor:pointer}
+.pill{display:inline-block;font-size:12px;padding:1px 8px;border-radius:9px;background:var(--line);color:var(--mut);margin-left:4px}
+table{width:100%;border-collapse:collapse;font-size:13px}td,th{padding:7px 4px;border-top:1px solid var(--line);text-align:right}th:first-child,td:first-child{text-align:left}
+.scroll{overflow-x:auto}.chip{flex:none;border:1px solid var(--line);background:var(--card);border-radius:16px;padding:5px 11px;font-size:13px}.chip.on{background:var(--pri);color:var(--onpri);border-color:var(--pri)}label{font-size:13px;color:var(--mut)}
+</style></head><body>
+<div id="app"></div><div id="sheet"></div>
+<nav><button data-t="today" class="on">Today</button><button data-t="glu">Glucose</button><button data-t="labs">Labs</button><button data-t="week">Week</button><button data-t="set">Goals</button></nav>
+<script>
+// name, unit, kcal, protein g, fiber g, carbs g, sat fat g, tip
+const F=[
+["Chicken curry","1 cup",250,24,2,8,3,"Great protein. Ask for less oil or cream in the gravy and pair with veggies and a fiber side to blunt the sugar rise."],
+["Dal / lentil curry","1 cup",230,12,8,35,2,"Star food: lentils bring protein plus soluble fiber that helps lower LDL and slow glucose. Make this a daily habit."],
+["Chana masala","1 cup",270,13,10,40,1.5,"Chickpeas are a top pick for blood sugar and cholesterol. Eat it before the rice."],
+["Rajma (kidney beans)","1 cup",260,14,9,40,1,"Beans are a double win: fiber for cholesterol, slow carbs for glucose."],
+["Paneer curry","1 cup",340,18,3,10,10,"Tasty, but high in saturated fat, which raises LDL. Keep to 1/2 cup or swap for chicken, tofu, or chana now and then."],
+["Butter chicken","1 cup",380,26,2,12,12,"Cream and butter make this heavy in saturated fat. Fine occasionally; tandoori chicken or plain chicken curry is the better regular."],
+["Lamb / goat curry","1 cup",320,25,2,8,7,"Good protein but more saturated fat. Keep red meat to 1 to 2 times a week and load up on veggies."],
+["Veg / palak curry","1 cup",150,5,5,15,2,"Excellent: fiber and volume with few carbs. Add more of these."],
+["Basmati rice (white)","1 cup cooked",205,4,0.6,45,0.1,"White rice digests fast. Try 1/2 cup, eat the protein and veggies first, and fill the rest with quinoa. Cooled then reheated rice digests a bit slower."],
+["Brown rice","1 cup cooked",215,5,3.5,45,0.4,"Better than white thanks to fiber. Still keep the portion around 1/2 to 1 cup."],
+["Quinoa","1 cup cooked",220,8,5,39,0.3,"Good swap: more protein and fiber than rice. Mixing half quinoa, half rice works well."],
+["Roti (whole wheat)","1 piece",100,3,3,18,0.5,"Whole wheat gives some fiber. Skip the ghee brushing, and have it with dal or veggies, not alone."],
+["Coffee + whole milk","1 cup",38,2,0,3,1.2,"Fine at 2 cups. Skip sugar and keep milk to about 1/4 cup."],
+["Coffee + half-and-half","1 cup",40,1,0,1.3,2.3,"Half-and-half is saturated fat that adds up for cholesterol. Using whole milk or less cream is a simple upgrade."],
+["Honey","1 tsp",21,0,0,5.7,0,"Honey is still sugar for your glucose. Keep to 1 tsp a day at most, and have it with food, not on its own."],
+["Egg","1 large",72,6,0,0.4,1.6,"1 a day is fine for most people. Cook without butter; if your LDL is high, check with your doctor."],
+["Chicken breast (grilled)","150 g",250,46,0,0,1.2,"Lean, very high protein. Ideal for muscle: aim for 30 to 40 g per meal."],
+["Tandoori chicken","150 g",280,32,0,2,3,"Great option: high protein and no heavy sauce. Add a squeeze of lemon and a salad."],
+["Fish (salmon)","150 g",310,34,0,0,3,"Omega-3s help triglycerides and heart health. Aim for fish twice a week."],
+["Veggies / salad","1 cup",50,3,4,10,0,"Fill half your plate. Eating veggies first can lower the post-meal glucose rise."],
+["Greek yogurt (plain, nonfat)","1 cup",130,22,0,8,0,"Easy protein. Choose plain, and add berries or nuts for fiber."],
+["Almonds","1 oz (23)",165,6,3.5,6,1.1,"Good fats and fiber; a small handful helps LDL. Stick to 1 oz."],
+["Oats","1/2 cup dry",150,5,4,27,0.5,"Beta-glucan fiber is proven to help lower LDL. Cook plain, add nuts or protein powder."],
+["Whey protein scoop","1 scoop",120,24,1,3,1,"Handy after a workout. Mix with water or milk, no sugar added."],
+["Apple / berries","1 fruit or cup",85,1,4,22,0,"Whole fruit with fiber beats juice. Pair with nuts or yogurt for a slower rise."],
+["Samosa / fried snack","1 piece",260,5,2,24,4,"Fried and refined. Best as a rare treat; try roasted chana or nuts instead."]
+];
+F.push(
+["Poha (veg)","1 cup",250,5,3,45,1,"Flattened rice digests fast. Add peanuts and veggies, pair it with a protein like sprouts or an egg white omelette, and keep it to 1 cup."],
+["Upma (veg)","1 cup",220,5,3,35,1.5,"Load it with veggies and use 1 tsp oil. Pair with curd or sprouts for protein."],
+["Moong dal chilla","2 pieces",180,12,5,22,1,"Excellent breakfast: protein and fiber with a gentle glucose rise. Cook with 1 tsp oil."],
+["Idli","2 pieces",130,4,1.5,26,0.2,"Light but mostly carbs. Always have sambar and a protein with it."],
+["Dosa (plain)","1 piece",170,4,1.5,30,1.5,"Refined carbs. Ask for less oil, pair with sambar and a protein side, or try a moong or ragi dosa."],
+["Sambar","1 cup",130,7,5,20,1,"Lentils and veggies together. Great with idli or dosa to slow the sugar rise."],
+["Egg bhurji (2 eggs)","1 serving",220,13,1,4,3.5,"That is 2 whole eggs and the yolks carry the cholesterol. For your 1-egg plan, use 1 egg plus extra whites and 1 tsp oil."],
+["Egg white veg omelette","3 whites",60,11,1,3,0.2,"Lean protein with no yolk cholesterol. A smart way to add protein on top of your 1 whole egg."],
+["Mixed veg sabzi","1 cup",110,3,4,12,1,"Bhindi, lauki, cauliflower, beans. Cook with 1 tsp oil and no cream or cashew paste."],
+["Sprouts salad","1 cup",120,9,6,20,0.3,"High in protein and fiber, and easy on blood sugar. A great snack or side."],
+["Raita (low-fat curd)","1/2 cup",60,4,0,5,1.2,"Cooling protein side. Use low-fat curd to keep saturated fat down."],
+["Roasted chana","1/4 cup",180,10,8,28,0.5,"Crunchy, high in fiber and protein. Great for glucose and cholesterol."],
+["Chaas (buttermilk)","1 glass",40,3,0,5,1,"Light and hydrating. Skip added sugar."],
+["Bajra / ragi roti","1 piece",110,3,3.5,20,0.5,"More fiber than white flour roti. A good swap on rice days."],
+["Soya chunks curry","1 cup",240,26,6,15,1,"High protein, no cholesterol, good fiber. A great weekly swap for meat."],
+["Fish curry","1 cup",250,25,2,6,2,"Protein plus omega-3s. Make it tomato-based, not heavy coconut cream."],
+["Moong khichdi","1 cup",250,10,4,40,1.5,"Comforting and balanced with lentils. Use half rice, add veggies, and have raita on the side."],
+["Egg curry (2 eggs)","1 serving",250,13,2,8,3,"That is 2 whole eggs. Use 1 egg with extra gravy veggies, or switch to chicken or dal."]
+);
+const MEALS=["Breakfast","Lunch","Dinner","Snacks"];
+const DEF={t:{kcal:2200,p:140,fib:35,carb:230,sat:15},wt:0};
+let S;try{S=JSON.parse(localStorage.getItem("pc1"))}catch(e){}
+S=S||{days:{},glu:{},set:DEF};S.days=S.days||{};S.glu=S.glu||{};S.set=S.set||DEF;
+const save=()=>{try{localStorage.setItem("pc1",JSON.stringify(S))}catch(e){}};
+const ds=d=>{const z=new Date(d.getTime()-d.getTimezoneOffset()*6e4);return z.toISOString().slice(0,10)};
+let date=ds(new Date()),tab="today",sel=null,qty=1,meal="Lunch",q="";
+const $=id=>document.getElementById(id);
+const day=()=>S.days[date]||(S.days[date]={items:[],wo:false});
+const r1=n=>Math.round(n*10)/10;
+function tot(items){const t={kcal:0,p:0,fib:0,carb:0,sat:0};items.forEach(i=>{const f=gf(i);t.kcal+=f[2]*i.q;t.p+=f[3]*i.q;t.fib+=f[4]*i.q;t.carb+=f[5]*i.q;t.sat+=f[6]*i.q});return t}
+function bar(l,v,t,u,max){const p=Math.min(100,v/t*100),w=max&&v>t,c=w?"w":(!max&&v>=t?"":"g");return `<div class="row sp"><span>${l}</span><span class="sub">${Math.round(v)} / ${t}${u}${max?" max":""}</span></div><div class="bar"><i class="${max?(w?'w':''):c}" style="width:${p}%"></i></div>`}
+const gf=i=>i.c||F[i.f]||["Removed food","",0,0,0,0,0,""];
+const isW=i=>i.f==8, isFib=i=>gf(i)[4]>=3, isVeg=i=>[1,2,3,7,19].includes(i.f), isProt=i=>gf(i)[3]>=15;
+function coach(d){
+ const it=d.items,t=tot(it),T=S.set.t,L=[],h=new Date().getHours(),today=date==ds(new Date());
+ const tp=T.p+(d.wo?15:0);
+ if(!it.length){L.push(["Start here","Log your first meal. Build each plate with a protein, a fiber source (veg, dal, beans), then a small portion of rice or quinoa."]);return L}
+ MEALS.forEach(m=>{const mi=it.filter(i=>i.m==m);if(mi.some(isW)&&!mi.some(isFib))L.push([m+": rice without fiber","Add veggies, dal, or chana to this meal. Fiber slows the sugar rise from rice."]);
+  if(mi.length>1&&!mi.some(isProt)&&mi.some(i=>gf(i)[5]>25))L.push([m+": low protein","Carbs with no protein spike glucose faster. Add chicken, egg, yogurt, or dal."])});
+ if(t.sat>T.sat*.8)L.push(["Saturated fat is high","You are at "+Math.round(t.sat)+" g. Cream, paneer, butter, and half-and-half add up. Choose leaner protein for the rest of the day."]);
+ if(t.carb>T.carb)L.push(["Carbs over target","Cut the next starch to 1/2 cup and double the veggies."]);
+ if(it.filter(i=>i.f==14).reduce((a,i)=>a+i.q,0)>1)L.push(["Honey","More than 1 tsp today. Go easy, it raises glucose like any sugar."]);
+ if(it.some(i=>[47,48,49,50,51,52,53,73,74,75,76,77,78,79,80,81,85,188,199,210,216,235,254,272,274,278].includes(i.f)))L.push(["Festival snack","Fried and carb-heavy, so keep to the portion you logged, have it right after a protein meal, and take a 10-minute walk afterwards."]);
+ if(it.some(i=>[90,91,94,96,97,98,99,166].includes(i.f)))L.push(["Sugary drink","Sweet coffee drinks and soda can carry 30 to 50 g of sugar. Ask for fewer pumps or sugar-free syrup, a smaller size, or switch to americano or cappuccino."]);
+ if(it.some(i=>(i.f>=100&&i.f<=161||i.f>=221)))L.push(["Eating out","Ask for sauce and dressing on the side, take half the rice or noodles, add a vegetable side, and eat the protein and veggies first."]);
+ let fc=0;for(let i=0;i<7;i++){const x=new Date();x.setDate(x.getDate()-i);const dd=S.days[ds(x)];if(dd)dd.items.forEach(y=>{if([18,41,46,62,153,212,214].includes(y.f))fc++})}
+ if(today&&h>=15&&fc<2)L.push(["Fish this week","You have had "+fc+" fish meal"+(fc==1?"":"s")+" in the last 7 days. Salmon or fish curry twice a week supports triglycerides and LDL."]);
+ if(t.sat>T.sat*.5&&it.some(i=>gf(i)[6]>=3))L.push(["Cooking tip for cholesterol","Temper with 1 tsp oil, not ghee. Use a tomato-onion base, and skip cream, butter, and cashew paste in your curries."]);
+ if(it.reduce((a,i)=>a+(i.f==15||i.f==113||i.f==249?i.q:(i.f==32||i.f==43||i.f==112||i.f==185||i.f==229||i.f==244)?2*i.q:0),0)>(S.set.t.egg||1))L.push(["Egg yolks","Over your whole-egg limit today. The yolks carry the cholesterol: use egg whites, chicken, fish, or dal for the rest of your protein."]);
+ if(today&&h>=15&&t.fib<T.fib*.5)L.push(["Fiber is behind","Add a dal, beans, salad, or fruit with nuts at your next meal."]);
+ if(today&&h>=17&&t.p<tp*.6)L.push(["Protein is behind","Make dinner 40 g or more: a chicken breast portion plus Greek yogurt or a shake."]);
+ if(d.wo)L.push(["Workout day","Aim for 30 to 40 g protein within 2 hours after training. Your protein target is "+tp+" g today. A little extra carb around training is fine."]);
+ L.push(["Habit","Eat veggies and protein first, then carbs. A 10 to 15 minute walk after dinner lowers glucose."]);
+ return L.slice(0,4)}
+function render(){
+ const el=$("app");
+ if(tab=="today"){
+  const d=day(),t=tot(d.items),T=S.set.t,tp=T.p+(d.wo?15:0);
+  el.innerHTML=`<h1>Plate Coach</h1><div class="row sp"><button class="ghost" onclick="mv(-1)">&lsaquo;</button><b>${new Date(date+"T12:00").toLocaleDateString(undefined,{weekday:"long",month:"short",day:"numeric"})}</b><button class="ghost" onclick="mv(1)">&rsaquo;</button></div>
+  <div class="card"><div class="row sp"><h2>${Math.round(t.kcal)} kcal</h2><button class="ghost" onclick="wo()">${d.wo?"&#10003; Gym day":"Gym day?"}</button></div><div style="height:8px"></div>
+  ${bar("Protein",t.p,tp,"g")}${bar("Fiber",t.fib,T.fib,"g")}${bar("Carbs",t.carb,T.carb,"g",1)}${bar("Saturated fat",t.sat,T.sat,"g",1)}</div>
+  ${missed(d)}<button class="btn" style="width:100%" onclick="ideasOpen()">What should I eat next?</button>${walkCard(d)}${coach(d).map(c=>`<div class="tip"><b>${c[0]}</b>${c[1]}</div>`).join("")}
+  ${MEALS.map(m=>{const mi=d.items.filter(i=>i.m==m);return `<div class="card"><div class="row sp"><h2>${m}</h2><span class="row"><button class="ghost" onclick="rep('${m}')">Repeat last</button><button class="btn" onclick="openSheet('${m}')">+ Add</button></span></div>${mi.map(i=>{const f=gf(i);return `<div class="item"><div>${f[0]} <small>x ${i.q} (${f[1]})</small><br><small>${Math.round(f[2]*i.q)} kcal &middot; P ${r1(f[3]*i.q)} &middot; Fib ${r1(f[4]*i.q)} &middot; C ${r1(f[5]*i.q)}</small></div><button class="x" aria-label="Remove" onclick="del(${i.id})">&times;</button></div>`}).join("")}</div>`}).join("")}`;
+ }else if(tab=="glu"){
+  const g=S.glu[date]||[];
+  el.innerHTML=`<h1>Glucose</h1><p class="sub">Log readings with your meter or CGM. ${date==ds(new Date())?"Today":date}</p>
+  <div class="card"><label>Reading (mg/dL)</label><input id="gv" type="number" inputmode="numeric" placeholder="e.g. 98"><div style="height:8px"></div><label>When</label><select id="gt"><option>Fasting</option><option>Before meal</option><option>2h after meal</option><option>Bedtime</option></select><div style="height:8px"></div><label>Which meal? (builds your spike report)</label><select id="gm"><option value="">None</option>${MEALS.map(m=>`<option>${m}</option>`).join("")}</select><div style="height:10px"></div><button class="btn" onclick="addG()">Save reading</button></div>
+  <div class="card">${g.length?g.map((x,i)=>`<div class="item"><div><b>${x.v}</b> mg/dL <span class="pill">${x.t}</span>${x.m?`<span class="pill">${x.m}</span>`:""}<br><small>${gnote(x)}</small></div><button class="x" onclick="delG(${i})">&times;</button></div>`).join(""):'<span class="sub">No readings yet today.</span>'}</div>
+  ${gins()}<p class="sub">General reference: fasting 70 to 99, and under 140 two hours after eating. Your own targets come from your doctor.</p>`;
+ }else if(tab=="labs"){
+  const L=(S.labs||[]).slice().sort((a,b)=>a.d<b.d?1:-1),f=[["ldl","LDL","under 100"],["hdl","HDL","over 40"],["tg","Triglycerides","under 150"],["a1c","A1c %","under 5.7"]];
+  el.innerHTML=`<h1>Labs</h1><p class="sub">Log blood test results to see if the diet is working.</p><div class="card"><label>Date</label><input id="ld" type="date" value="${ds(new Date())}">${f.map(x=>`<div style="height:8px"></div><label>${x[1]} (common goal: ${x[2]})</label><input id="l_${x[0]}" type="number" step="any" inputmode="decimal">`).join("")}<div style="height:10px"></div><button class="btn" onclick="addL()">Save results</button></div>${L.length?`<div class="card scroll"><table><tr><th>Date</th>${f.map(x=>`<th>${x[1].split(" ")[0]}</th>`).join("")}<th></th></tr>${L.map((r,i)=>`<tr><td>${r.d.slice(5)}</td>${f.map(x=>{const p=L[i+1],v=r[x[0]],d=p&&p[x[0]]!=null&&v!=null?v-p[x[0]]:null;return `<td>${v==null?"-":v}${d?` <small class="sub">${d>0?"+":""}${r1(d)}</small>`:""}</td>`}).join("")}<td><button class="x" onclick="delL(${r.id})">&times;</button></td></tr>`).join("")}</table></div>`:""}<p class="sub">Small numbers show the change from the previous test. Goals vary by person, so ask your doctor for yours.</p>`;
+ }else if(tab=="week"){
+  const rows=[];for(let i=6;i>=0;i--){const d=new Date();d.setDate(d.getDate()-i);const k=ds(d),dd=S.days[k],t=tot(dd?dd.items:[]),f=(S.glu[k]||[]).filter(x=>x.t=="Fasting");rows.push(`<tr><td>${d.toLocaleDateString(undefined,{weekday:"short"})}${dd&&dd.wo?" &#127947;":""}</td><td>${Math.round(t.kcal)}</td><td>${Math.round(t.p)}</td><td>${Math.round(t.fib)}</td><td>${Math.round(t.sat)}</td><td>${f.length?f[0].v:"-"}</td></tr>`)}
+  const gyms=Object.keys(S.days).filter(k=>S.days[k].wo&&k>ds(new Date(Date.now()-7*864e5))).length;
+  el.innerHTML=`<h1>This week</h1><div class="card scroll"><table><tr><th>Day</th><th>kcal</th><th>Protein</th><th>Fiber</th><th>Sat fat</th><th>Fasting</th></tr>${rows.join("")}</table></div><div class="tip"><b>Workouts: ${gyms} of 4 this week</b>Use the Gym day button on Today to track them. Aim for protein and fiber to hit target on most days.</div>`;
+ }else{
+  const T=S.set.t;
+  el.innerHTML=`<h1>Goals</h1><div class="card"><label>Body weight (kg), sets protein at 1.6 g/kg</label><input id="wt" type="number" value="${S.set.wt||""}" placeholder="e.g. 80" onchange="setW(this.value)">
+  ${[["kcal","Calories"],["p","Protein (g)"],["fib","Fiber (g)"],["carb","Carbs max (g)"],["sat","Saturated fat max (g)"],["egg","Whole eggs per day"]].map(a=>`<div style="height:8px"></div><label>${a[1]}</label><input type="number" value="${T[a[0]]??(a[0]=="egg"?1:"")}" onchange="setT('${a[0]}',this.value)">`).join("")}</div>
+  <p class="sub">These are starting points. A registered dietitian or your doctor can fine-tune them, especially for blood sugar and cholesterol medication. Entries stay on this device.</p><div class="card"><h2>Backup</h2><p class="sub">Copy your data and keep it somewhere safe, or paste a backup below to restore. Restoring replaces what is here.</p><div class="row"><button class="btn" onclick="bk()">Copy backup</button><button class="ghost" onclick="rs()">Restore from box</button></div><div style="height:8px"></div><textarea id="bkt" rows="3" style="width:100%;font:inherit;background:var(--card);color:var(--ink);border:1px solid var(--line);border-radius:10px"></textarea><div id="bks" class="sub"></div></div>`;
+ }
+ document.querySelectorAll("nav button").forEach(b=>b.classList.toggle("on",b.dataset.t==tab));
+}
+function gnote(x){const v=+x.v;if(x.t=="Fasting")return v<70?"Low. Eat something and check again.":v<100?"In the typical range.":v<126?"A bit elevated. Share trends with your doctor.":"High. Mention this to your doctor.";if(x.t=="2h after meal")return v<140?"Good response to that meal.":v<180?"Higher than ideal. Try less rice or more fiber and protein first.":"High. Review that meal and tell your doctor if it repeats.";return v<70?"Low. Eat something.":"Logged."}
+function addG(){const v=$("gv").value;if(!v)return;(S.glu[date]=S.glu[date]||[]).push({v:+v,t:$("gt").value,m:$("gm").value});save();render()}
+function delG(i){S.glu[date].splice(i,1);save();render()}
+function mv(n){const d=new Date(date+"T12:00");d.setDate(d.getDate()+n);if(ds(d)<=ds(new Date())){date=ds(d);render()}}
+function wo(){const d=day();d.wo=!d.wo;save();render()}
+function del(id){const d=day();d.items=d.items.filter(i=>i.id!=id);save();render()}
+function setT(k,v){S.set.t[k]=+v||S.set.t[k];save()}
+function setW(v){S.set.wt=+v;if(+v){S.set.t.p=Math.round(+v*1.6)}save();render()}
+function openSheet(m){ph=null;nf=false;idm=false;meal=m;sel=null;qty=1;q="";drawSheet()}
+function closeSheet(){$("sheet").innerHTML=""}
+let nf=false,idm=false;
+function gins(){const B={"Meals with white rice":[],"Meals with quinoa or brown rice":[],"Other meals":[]},K=Object.keys(B);
+ Object.keys(S.glu).forEach(k=>S.glu[k].forEach(x=>{if(x.t!="2h after meal"||!x.m)return;const it=((S.days[k]||{}).items||[]).filter(i=>i.m==x.m);B[K[it.some(i=>i.f==8)?0:it.some(i=>i.f==9||i.f==10)?1:2]].push(+x.v)}));
+ const L=K.filter(k=>B[k].length).map(k=>`${k}: avg ${Math.round(B[k].reduce((a,b)=>a+b)/B[k].length)} mg/dL (${B[k].length} reading${B[k].length>1?"s":""})`);
+ return `<div class="tip"><b>What spikes you</b>${L.length?L.join("<br>"):"Log a 2h-after reading and tag the meal. After a few, you will see which meals raise your glucose most."}</div>`}
+function addL(){const g=k=>{const v=$("l_"+k).value;return v===""?null:+v},r={id:Date.now(),d:$("ld").value||ds(new Date()),ldl:g("ldl"),hdl:g("hdl"),tg:g("tg"),a1c:g("a1c")};if(r.ldl==null&&r.hdl==null&&r.tg==null&&r.a1c==null)return;(S.labs=S.labs||[]).push(r);save();render()}
+function delL(id){S.labs=(S.labs||[]).filter(r=>r.id!=id);save();render()}
+function rep(m){const ks=Object.keys(S.days).filter(k=>k<date&&S.days[k].items.some(i=>i.m==m)).sort();if(!ks.length)return;S.days[ks[ks.length-1]].items.filter(i=>i.m==m).forEach((i,k)=>day().items.push(Object.assign({},i,{id:Date.now()+k})));save();render()}
+function bk(){const j=JSON.stringify(S),s=$("bks");(navigator.clipboard?navigator.clipboard.writeText(j):Promise.reject()).then(()=>s.textContent="Backup copied. Paste it into Notes or a message to yourself.").catch(()=>{$("bkt").value=j;$("bkt").select();s.textContent="Select all in the box and copy it."})}
+function rs(){try{const o=JSON.parse($("bkt").value);if(!o.days||!o.set)throw 0;S=o;S.glu=S.glu||{};save();render();}catch(e){$("bks").textContent="That doesn’t look like a valid backup."}}
+function drawNf(){$("sheet").innerHTML=`<div class="sheet" onclick="if(event.target==this){nf=false;closeSheet()}"><div><h2>New food or recipe</h2><p class="sub">Enter values for one serving of your own version.</p>${[["n","Name","text"],["u","Serving (e.g. 1 bowl)","text"],["k","Calories","number"],["p","Protein (g)","number"],["fi","Fiber (g)","number"],["c","Carbs (g)","number"],["s","Saturated fat (g)","number"]].map(a=>`<label>${a[1]}</label><input id="n_${a[0]}" type="${a[2]}" step="any"><div style="height:6px"></div>`).join("")}<div class="row"><button class="ghost" style="flex:1" onclick="nf=false;drawSheet()">Back</button><button class="btn" style="flex:2" onclick="saveNf()">Save food</button></div></div></div>`}
+function saveNf(){const g=k=>+$("n_"+k).value||0,n=$("n_n").value.trim();if(!n)return;(S.my=S.my||[]).push([n,$("n_u").value||"1 serving",g("k"),g("p"),g("fi"),g("c"),g("s"),"Your own recipe. Check that it still fits your protein, fiber and saturated fat goals."]);save();nf=false;drawSheet()}
+const IDEAS=[["Tandoori chicken, veg curry, salad, 1/2 cup quinoa",[[17,1],[7,1],[19,1],[10,.5]],"m"],["Chicken curry, dal, veggies, 1 roti",[[0,1],[1,1],[19,1],[11,1]],"m"],["Chana masala, Greek yogurt, salad",[[2,1],[20,1],[19,1]],"m"],["Grilled chicken, rajma, salad, 1/2 cup brown rice",[[16,1],[3,1],[19,1],[9,.5]],"m"],["Salmon, veg curry, quinoa",[[18,1],[7,1],[10,1]],"m"],["Dal, tandoori chicken, salad, 1 roti",[[1,1],[17,1],[19,1],[11,1]],"m"],["Oats, egg, Greek yogurt, almonds",[[22,1],[15,1],[20,1],[21,1]],"b"],["2 eggs, veggies, 1 roti",[[15,2],[19,1],[11,1]],"b"],["Whey shake, apple, almonds",[[23,1],[24,1],[21,1]],"s"],["Greek yogurt with almonds",[[20,1],[21,1]],"s"]];
+IDEAS.push(
+["Moong dal chilla (2), raita, cucumber salad",[[28,1],[36,1],[19,1]],"b"],
+["Idli (2), sambar, raita",[[29,1],[31,1],[36,1]],"b"],
+["1 whole egg, egg white veg omelette, 1 ragi roti",[[15,1],[33,1],[39,1]],"b"],
+["Veg poha, egg white omelette, cucumber salad",[[26,1],[33,1],[19,1]],"b"],
+["Veg upma, raita, sprouts salad",[[27,1],[36,1],[35,.5]],"b"],
+["Dal, mixed veg sabzi, 1 bajra roti, raita",[[1,1],[34,1],[39,1],[36,1]],"m"],
+["Moong khichdi, veg sabzi, raita",[[42,1],[34,1],[36,1]],"m"],
+["Soya chunks curry, 1 roti, salad, raita",[[40,1],[11,1],[19,1],[36,1]],"m"],
+["Fish curry, 1/2 cup brown rice, veg sabzi",[[41,1],[9,.5],[34,1]],"m"],
+["Rajma, 1/2 cup brown rice, salad, raita",[[3,1],[9,.5],[19,1],[36,1]],"m"],
+["Chana masala, sprouts salad, 1 bajra roti",[[2,1],[35,1],[39,1]],"m"],
+["Tandoori chicken, sambar, veg sabzi",[[17,1],[31,1],[34,1]],"m"],
+["Roasted chana and chaas",[[37,1],[38,1]],"s"],
+["Sprouts salad and chaas",[[35,1],[38,1]],"s"]
+);
+F.push(
+["Chicken keema","1 cup",280,28,3,8,4,"High protein. Use lean chicken mince, 1 tsp oil, and add peas or spinach for fiber."],
+["Palak chicken","1 cup",230,26,3,8,3,"Protein plus greens in one dish. Skip the cream and it is an excellent regular."]
+);
+IDEAS.push(
+["Chicken keema, veg sabzi, 1 bajra roti",[[44,1],[34,1],[39,1]],"m"],
+["Palak chicken, 1 roti, cucumber salad, raita",[[45,1],[11,1],[19,1],[36,1]],"m"],
+["Grilled chicken, dal, salad",[[16,1],[1,1],[19,1]],"m"],
+["Tandoori chicken, veg sabzi, 1/2 cup quinoa",[[17,1],[34,1],[10,.5]],"m"],
+["1 egg, egg white veg omelette, oats",[[15,1],[33,1],[22,1]],"b"],
+["Tandoori chicken bites and salad",[[17,.5],[19,1]],"s"]
+);
+F.push(["Salmon tikka (baked)","150 g",300,34,0,3,3,"Salmon marinated in curd and spices, baked or air-fried. Omega-3s help triglycerides and heart health. Aim for 2 fish meals a week."]);
+IDEAS.push(
+["Salmon tikka, veg sabzi, 1/2 cup quinoa",[[46,1],[34,1],[10,.5]],"m"],
+["Salmon, dal, salad",[[18,1],[1,1],[19,1]],"m"],
+["Salmon tikka, sprouts salad, 1 bajra roti",[[46,1],[35,1],[39,1]],"m"]
+);
+function missed(d){if(date!=ds(new Date()))return "";const n=new Date(),h=n.getHours()+n.getMinutes()/60,C=[["Breakfast",10.5],["Lunch",14.5],["Dinner",21]];d.skip=d.skip||{};
+ return C.filter(c=>h>=c[1]&&!d.items.some(i=>i.m==c[0])&&!d.skip[c[0]]).map(c=>`<div class="tip"><b>No ${c[0].toLowerCase()} logged yet</b>Log it now while you remember. Even a rough entry helps.<div class="row" style="margin-top:8px"><button class="btn" onclick="openSheet('${c[0]}')">Log ${c[0].toLowerCase()}</button><button class="ghost" onclick="skipM('${c[0]}')">I skipped it</button></div></div>`).join("")}
+function skipM(m){const d=day();d.skip=d.skip||{};d.skip[m]=true;save();render()}
+document.addEventListener("visibilitychange",()=>{if(!document.hidden&&tab=="today"&&!$("sheet").innerHTML)render()});
+F.push(
+["Sakinalu / karam sakinalu","3 pieces (30 g)",150,2,1,18,1.2,"Rice-flour snack fried in oil. Keep to 1 serving, have it after a meal with protein, not on an empty stomach, then take a short walk."],
+["Boorelu (poornam)","1 piece",160,3,1.5,22,1.5,"Deep-fried with jaggery and chana dal filling. Jaggery still raises glucose, so 1 piece is the limit."],
+["Pappu appalu","1 piece",120,3,1.5,16,1,"Fried sweet made with dal. Treat it as an occasional snack: 1 piece, after a protein meal."],
+["Palli appalu","1 piece",140,3.5,1.5,15,1.3,"Peanut version of appalu. A little more protein and fat, still fried and sweet, so keep it to 1."],
+["Sabudana khichdi","1 cup",350,4,1.5,58,2,"Sabudana (tapioca) is nearly pure starch and spikes glucose fast. Keep to 1/2 cup, add peanuts and veggies, and have it with curd or a protein."],
+["Sabudana vada","2 pieces",300,4,2,38,4,"Fried tapioca. High in fast carbs and oil, so treat it as a rare snack."],
+["Sabudana appa (fried)","3 pieces",270,4,1.5,36,3.5,"Sabudana and flour fried in oil: fast starch plus oil, so it raises glucose quickly. Keep to 1 to 2 pieces, have it after a protein meal, then take a short walk."],
+["Pesarattu (moong dosa)","1 piece",160,9,4,22,0.5,"A great one: protein and fiber from whole moong, gentle on glucose. Cook with 1 tsp oil and have it with ginger chutney or raita."]
+);
+IDEAS.push(["2 pesarattu, raita, sprouts salad",[[54,2],[36,1],[35,.5]],"b"]);
+F.push(
+["Ragi sangati","1 ball",190,5,4,38,0.3,"Telangana staple and a great swap for rice: finger millet gives fiber and a slower glucose rise. Have it with a pappu or chicken curry plus veg."],
+["Jonna roti (jowar)","1 piece",110,3,3,22,0.3,"Jowar is higher in fiber than rice or wheat. Excellent with curries and fish."],
+["Tomato pappu","1 cup",190,10,5,28,1.5,"Dal with tomato: protein and fiber. Make with 1 tsp oil for tempering and have it before the rice."],
+["Gongura pappu","1 cup",200,11,6,28,1.5,"Sorrel leaves and dal: fiber and protein. Gongura is sour and salty, so go easy on added salt."],
+["Palakura pappu","1 cup",180,11,6,24,1.2,"Spinach dal. A top choice for fiber and protein."],
+["Gongura chicken","1 cup",280,27,3,8,4,"Good protein with greens. Use 1 tsp oil, skinless chicken, and watch the salt."],
+["Natu kodi pulusu","1 cup",260,26,2,7,3.5,"Country chicken tamarind curry. Lean protein: use skinless pieces and 1 tsp oil."],
+["Chepala pulusu","1 cup",230,24,2,8,2,"Fish in tamarind gravy. Protein and omega-3s, with no cream. A regular pick."],
+["Royyala iguru (prawns)","1 cup",200,24,1,6,2,"Prawns have some cholesterol but very little saturated fat. Fine 1 to 2 times a week with veggies."],
+["Kodi vepudu (chicken fry)","1 serving",330,33,1,6,4.5,"Tasty dry fry. Use less oil, remove the skin, and air-fry or shallow-fry for a lighter version."],
+["Gutti vankaya","1 cup",220,5,5,14,3,"Stuffed brinjal curry with peanuts and coconut. Good fiber, but the masala adds fat, so keep to 1 cup."],
+["Bendakaya fry (okra)","1 cup",150,3,4,12,1.5,"Okra is high in fiber. Fry with 1 tsp oil."],
+["Dondakaya fry (tindora)","1 cup",140,3,4,12,1.5,"Low-carb veg. Go light on the oil."],
+["Beerakaya curry (ridge gourd)","1 cup",90,3,3,9,0.8,"Light and filling. Good to fill half your plate."],
+["Pulihora (tamarind rice)","1 cup",300,5,2,50,1.5,"Mostly rice with oil. Keep to 1/2 cup and add a protein and a veg side."],
+["Perugu annam (curd rice)","1 cup",230,6,0.5,38,2,"Rice again. Keep to 1/2 cup and use low-fat curd. Add cucumber or veggies."],
+["Hyderabadi chicken biryani","1 cup",400,22,2,48,5,"Rich and big on rice and ghee. Keep to 1 cup, have raita and salad, and make it an occasional meal."],
+["Korra annam (foxtail millet)","1 cup",200,6,4,38,0.5,"A better swap for white rice. More fiber and a gentler glucose rise."],
+["Garelu","2 pieces",240,8,4,26,2,"Fried urad dal vada. Decent protein but oily. Have 1 to 2 with chutney after a meal."],
+["Punugulu","4 pieces",250,5,2,30,3,"Fried idli-batter balls. Keep to 2 to 3 and pair with a protein."],
+["Mirchi bajji","2 pieces",240,4,3,24,3,"Fried in besan batter. A rare snack: 1 piece, then a walk."],
+["Chekkalu","5 pieces",160,3,1.5,20,1.3,"Fried rice crackers. Easy to overeat, so portion out a handful."],
+["Ariselu","1 piece",190,2,1,30,2.5,"Rice and jaggery sweet, fried. Jaggery still raises glucose, so 1 piece only."],
+["Bobbatlu (puran poli)","1 piece",250,4,2,40,4,"Sweet flatbread with ghee. Have 1 piece after a protein meal, then walk."],
+["Sunnundalu","1 piece",180,4,1.5,20,5,"Urad dal laddu made with ghee. High in saturated fat, so a rare treat."],
+["Pootharekulu","1 piece",170,2,0.5,28,3,"Sugar and ghee in rice paper. Pure treat, 1 piece at most."],
+["Payasam","1/2 cup",200,5,1,32,3,"Sweet milk pudding. Keep to 1/2 cup and skip extra sugar."],
+["Pachadi / chutney","2 tbsp",50,1,1.5,4,0.5,"Tomato, gongura or peanut chutney is salty and oily. 1 to 2 tbsp is plenty."],
+["Avakaya pickle","1 tsp",30,0,0,1,0.5,"Very high in salt and oil. Limit to 1 tsp, especially for blood pressure."],
+["Kandi podi","1 tbsp",40,2,1.5,4,0.2,"Lentil powder. Mix with 1 tsp oil, not extra ghee."]
+);
+IDEAS.push(
+["Idli (2), sambar, kandi podi",[[29,1],[31,1],[84,1]],"b"],
+["1 pesarattu, egg white omelette, raita",[[54,1],[33,1],[36,1]],"b"],
+["2 jonna roti, gongura chicken, salad",[[56,2],[60,1],[19,1]],"m"],
+["Ragi sangati, natu kodi pulusu, veg sabzi",[[55,1],[61,1],[34,1]],"m"],
+["1/2 cup korra annam, gongura pappu, bendakaya fry, raita",[[72,.5],[58,1],[66,1],[36,1]],"m"],
+["Jonna roti, chepala pulusu, beerakaya curry",[[56,1],[62,1],[68,1]],"m"],
+["Tomato pappu, dondakaya fry, 1/2 cup brown rice, raita",[[57,1],[67,1],[9,.5],[36,1]],"m"],
+["Palakura pappu, kodi vepudu, salad, jonna roti",[[59,1],[64,1],[19,1],[56,1]],"m"],
+["Royyala iguru, jonna roti, beerakaya curry, salad",[[63,1],[56,1],[68,1],[19,1]],"m"],
+["Gutti vankaya, dal, jonna roti",[[65,1],[1,1],[56,1]],"m"]
+);
+F.push(
+["Palli nuvvula muddalu (peanut-sesame-jaggery)","1 piece (30 g)",145,3.5,2,15,1.4,"Peanuts and sesame add protein, fiber and healthy fats, which makes this better than fried sweets. Jaggery is still sugar, so keep to 1 piece after a meal."]
+);
+F.push(
+["Americano","16 oz",15,0,0,3,0,"Basically free. Add milk, not sugar, if you need it."],
+["Black coffee / cold brew","16 oz",5,0,0,0,0,"Zero sugar and fine daily. Keep caffeine earlier in the day."],
+["Espresso","2 shots",5,0,0,1,0,"Great low-calorie option."],
+["Latte (2% milk)","16 oz",190,13,0,19,4.5,"Milk gives protein but about 19 g of sugar from lactose. Ask for a smaller size or unsweetened soy milk."],
+["Vanilla latte","16 oz",250,12,0,37,4.5,"The vanilla syrup adds about 18 g of sugar. Ask for sugar-free vanilla or 1 pump."],
+["Mocha (no whip)","16 oz",330,13,2,43,5,"About 40 g of sugar, a dessert in a cup. Try a small size with 1 pump, or switch to a latte."],
+["Cappuccino","12 oz",110,7,0,9,2.5,"Mostly foam, so less milk and sugar than a latte. A good choice."],
+["Flat white","12 oz",170,9,0,14,4,"More milk than a cappuccino, no added sugar. Fine as a treat."],
+["Caramel macchiato","16 oz",250,10,0,35,5,"Syrup and drizzle add up. Ask for less caramel, or a plain latte."],
+["Iced latte (2% milk)","16 oz",130,8,0,12,3,"Lighter than a hot latte. Skip syrups."],
+["Pumpkin spice latte","16 oz",390,14,0,52,8,"Over 50 g of sugar. Treat it as a dessert, once in a while."],
+["Chai latte","16 oz",240,8,0,45,3,"Chai concentrate is sweetened. Ask for fewer pumps or make masala chai at home."],
+["Matcha latte","16 oz",240,12,1,34,4.5,"Café matcha is usually pre-sweetened. Ask for unsweetened."],
+["Caramel Frappuccino","16 oz",380,5,0,54,6,"Blended sugar and whipped cream. A rare treat, small size."],
+["Cheeseburger (fast food, single)","1",300,16,1,33,6,"Fine as an occasional meal. Skip fries and soda, and add a side salad."],
+["Burger (restaurant, with bun)","1",700,38,2,42,14,"High in saturated fat. Skip the cheese and bacon, or go lettuce-wrapped, and share the fries."],
+["French fries","medium",350,4,4,45,2.5,"Fast carbs and oil. Share a small one or swap for a side salad."],
+["Grilled chicken sandwich","1",380,30,2,38,2,"One of the better fast-food picks. Skip the mayo or sauce."],
+["Fried chicken sandwich","1",480,28,2,45,3,"Breaded and fried. Grilled is the better regular choice."],
+["Chicken nuggets","6 pieces",270,14,1,17,2.5,"Fried and breaded. Choose grilled nuggets if offered."],
+["Hot dog with bun","1",290,10,1,24,5,"Processed meat, salty and high in saturated fat. Keep it rare."],
+["Caesar salad with chicken","1 bowl",450,32,3,15,7,"Dressing and cheese add fat. Ask for the dressing on the side."],
+["Cobb salad","1 bowl",500,35,5,10,9,"High protein, but bacon and blue cheese add saturated fat. Skip the bacon."],
+["Mac and cheese","1 cup",380,14,1,45,8,"Refined carbs and cheese. Small portion with a protein and veggies."],
+["Buffalo wings","6 pieces",480,38,0,2,8,"High protein but fried and salty. Choose baked or grilled with sauce on the side, and add celery."],
+["Sirloin steak","6 oz",300,42,0,0,5,"Great protein. Trim visible fat, and pair with veggies. Keep red meat to 1 or 2 times a week."],
+["Scrambled eggs (2 eggs)","1 serving",190,13,0,2,5,"That is 2 whole eggs. Use 1 egg plus extra whites, and cook with little butter."],
+["Egg and cheese breakfast sandwich","1",300,16,1,30,7,"1 whole egg, plus cheese and refined bread. Add fruit or choose a whole wheat version."],
+["Pancakes with syrup","3",520,9,2,95,4,"A big glucose spike. Try 1 or 2 with Greek yogurt and berries, or choose oatmeal instead."],
+["Bagel with cream cheese","1",400,13,3,62,7,"Refined carbs. Choose whole grain, half a bagel, and add an egg white omelette or turkey."],
+["Turkey sandwich (whole wheat)","1",350,25,5,40,2.5,"A solid lunch. Add veggies, and go light on mayo and cheese."],
+["Peanut butter","2 tbsp",190,7,2,7,3,"Healthy fats and protein. Choose one with no added sugar, and measure it."],
+["Pizza, cheese","1 large slice",300,13,2,36,5,"Refined crust plus cheese. Keep to 1 or 2 slices with a big salad, and blot the oil."],
+["Pizza, pepperoni","1 large slice",340,14,2,35,6,"More saturated fat and salt. Choose veggie or chicken toppings instead."],
+["Pizza, veggie","1 large slice",280,12,3,37,4.5,"Better than pepperoni. Pair with a salad and cap it at 2 slices."],
+["Hummus","1/4 cup",100,4,3,9,0.8,"Great for fiber and healthy fats. Eat it with veggies instead of chips or pita."],
+["Falafel","4 pieces",330,13,5,32,2,"Chickpea-based but fried. Baked is better. Good fiber and protein."],
+["Chicken shawarma wrap","1",550,35,4,48,5,"Good protein. Ask for a bowl or half the wrap, extra veggies, and sauce on the side."],
+["Chicken souvlaki","2 skewers",300,36,0,3,2,"Excellent: lean grilled protein. Pair with salad and hummus."],
+["Greek salad","1 bowl",250,8,4,12,5,"Veggies and olive oil. Feta adds saturated fat, so keep it light."],
+["Gyro (with pita)","1",600,30,3,50,9,"High in saturated fat and sodium. Choose the chicken version, and skip fries."],
+["Tabbouleh","1 cup",140,3,4,17,0.6,"Herbs and bulgur. Light and fiber-rich."],
+["Grilled white fish","150 g",180,34,0,0,1,"Lean protein. Ask for it grilled with lemon and veggies."],
+["Whole wheat pita","1",170,6,5,35,0.3,"Decent fiber. Use half as a scoop for hummus."],
+["Lentil soup","1 cup",180,12,8,28,0.5,"Excellent fiber and protein. A great starter or light meal."],
+["Olive oil","1 tbsp",120,0,0,0,1.9,"Healthy fat, but calorie dense. Measure it, 1 to 2 tbsp a day."],
+["Fried rice (chicken)","1 cup",340,13,2,44,2,"Mostly rice and oil. Take 1/2 cup and add steamed veggies or a protein dish."],
+["Lo mein","1 cup",330,11,3,45,2,"Noodles in oil. Pick a veggie and protein stir-fry instead."],
+["Kung pao chicken","1 cup",350,28,3,15,4,"Good protein with peanuts and veggies. Ask for less sauce."],
+["General Tso chicken","1 cup",430,22,2,40,4,"Fried and sugary. Choose steamed chicken and veggies instead."],
+["Beef and broccoli","1 cup",280,25,3,12,3,"A solid pick: protein and fiber. Ask for sauce on the side."],
+["Chicken and broccoli","1 cup",220,26,3,10,1,"One of the best Chinese-restaurant choices. Ask for light sauce."],
+["Steamed dumplings","6 pieces",280,12,2,36,2,"Better than fried. Add a veggie dish, and go easy on soy sauce."],
+["Hot and sour soup","1 cup",90,7,1,10,0.5,"Light and filling, but salty."],
+["Mapo tofu","1 cup",280,16,2,10,3,"Tofu is cholesterol-free protein. Ask for less oil, and eat with veggies."],
+["Pad Thai","1 cup",400,18,3,52,3.5,"Noodles with sugar and oil. Take half, add extra veggies and a protein."],
+["Thai green curry (chicken)","1 cup",330,22,2,12,12,"Coconut milk makes it high in saturated fat. Keep to 1/2 cup of sauce."],
+["Tom yum soup","1 cup",90,10,1,6,1,"Light, spicy, and high in protein for the calories. A great starter."],
+["Tom kha gai","1 cup",260,17,1,8,13,"Coconut soup, high in saturated fat. Choose tom yum instead."],
+["Som tam (papaya salad)","1 cup",110,3,4,18,0.5,"Fresh and fiber-rich. Ask for less sugar and sauce."],
+["Chicken satay","3 skewers",270,26,1,8,3,"Good protein. Go light on the peanut sauce."],
+["Larb gai","1 cup",220,25,2,6,2,"Minced chicken with herbs and lime. A very good choice."],
+["Thai basil chicken","1 cup",280,26,2,10,3,"Protein-forward. Ask for extra vegetables and rice on the side, 1/2 cup."],
+["Pho","1 bowl",450,28,2,55,2,"Broth with lean protein, but a lot of noodles. Eat the protein and veggies first and leave some noodles."],
+["Banh mi","1",500,22,3,60,5,"White baguette. Ask for extra veggies and lean grilled chicken, and eat half."],
+["Fresh spring rolls","2 pieces",160,8,2,24,0.5,"Light and fresh, not fried. Go easy on the peanut dipping sauce."],
+["Vermicelli bowl","1 bowl",550,28,5,75,4,"Lots of noodles. Take half the noodles and double the greens and protein."],
+["Salmon sashimi","6 pieces",190,22,0,0,2,"Excellent: omega-3s and protein, no carbs."],
+["Sushi roll (California)","8 pieces",260,9,3,38,0.6,"White rice carbs. Choose sashimi or rolls with fish and veggies, and brown rice if offered."],
+["Miso soup","1 cup",40,3,1,5,0.2,"Light and fine, though salty."],
+["Poke bowl","1 bowl",550,32,4,70,2.5,"Good protein. Ask for half rice and extra veggies, and go light on sauce."],
+["Ramen (tonkotsu)","1 bowl",800,35,3,85,12,"Rich pork broth, refined noodles, and very high in salt and saturated fat. A rare meal."],
+["Bibimbap","1 bowl",560,25,6,85,3,"Veggies and protein over rice. Ask for half the rice and extra veggies."],
+["Chicken tacos","2 tacos",350,24,5,30,3,"A good pick. Choose corn tortillas, grilled chicken, and salsa or guacamole."],
+["Burrito bowl (chicken)","1 bowl",700,42,14,65,6,"High fiber and protein. Take half the rice, extra beans and veggies, and skip the sour cream."],
+["Guacamole","1/4 cup",100,1,4,6,1.5,"Healthy fats and fiber. Choose it over cheese or sour cream."],
+["Potato chips","1 oz",150,2,1,15,1.5,"Easy to overeat. Pour a portion instead of eating from the bag."],
+["Ice cream","1/2 cup",140,2,0.5,16,4.5,"Saturated fat and sugar. Keep to a small scoop after a meal."],
+["Chocolate chip cookie","1 large",220,2,1,30,5,"A treat. Eat it after a meal, not alone."],
+["Donut (glazed)","1",250,4,1,31,6,"Refined flour, sugar, and fat. An occasional treat."],
+["Soda","12 oz",140,0,0,39,0,"39 g of sugar and no fiber, a fast glucose spike. Choose sparkling water or unsweetened tea."],
+["Protein bar","1",200,20,5,22,3,"Handy after the gym. Pick one with under 5 g of added sugar."],
+["Protein shake (ready to drink)","1",160,30,1,5,1.5,"A convenient 30 g of protein after a workout."],
+["Beef jerky","1 oz",80,9,0,3,1,"Portable protein, but high in sodium."],
+["String cheese","1",80,6,0,1,3.5,"Easy protein snack. Pair it with fruit or nuts."],
+["Banana","1 medium",105,1,3,27,0.1,"Good fruit, but sugary. Pair it with nuts or yogurt, not alone."],
+["Beer","12 oz",150,1,0,13,0,"Carbs and empty calories. Limit it, and have it with food."],
+["Wine","5 oz",125,0,0,4,0,"Limit to 1 glass and have it with food, not on an empty stomach."],
+["Trail mix","1/4 cup",170,5,2,15,3,"Nuts are good, candy and raisins are not. Measure a small handful."]
+);
+IDEAS.push(
+["Chicken souvlaki, Greek salad, hummus",[[124,1],[125,1],[121,1]],"m"],
+["Chicken and broccoli, 1/2 cup rice, salad",[[137,1],[8,.5],[19,1]],"m"],
+["Tom yum soup, chicken satay, som tam",[[143,1],[146,1],[145,1]],"m"],
+["Salmon sashimi, miso soup, salad",[[153,1],[155,1],[19,1]],"m"],
+["Chicken tacos (2) with guacamole",[[159,1],[161,1]],"m"],
+["Larb gai, som tam, 1/2 cup rice",[[147,1],[145,1],[8,.5]],"m"]
+);
+let cat="All";
+const CATS=[["All"],["Indian",[[0,11],[25,46],[200,212],[241,241]]],["Telangana/Andhra",[[47,85],[179,199]]],["South Indian",[[213,220]]],["Rice & grains",[[8,11],[55,56],[72,72],[175,178],[286,288]]],["Coffee",[[12,13],[86,99],[218,218]]],["Basics",[[14,24]]],["American",[[100,120]]],["Mediterranean",[[121,131],[229,229]]],["Chinese",[[132,140]]],["Thai/Viet",[[141,152]]],["Japan/Korea/Mexico",[[153,161],[230,237]]],["Italian/French",[[221,228]]],["Other cuisines",[[238,240]]],["Turkish/Spanish",[[242,250]]],["Filipino/Indonesian",[[251,259]]],["Sri Lankan/Nepali",[[260,267]]],["Middle Eastern",[[268,274]]],["BBQ/Southern",[[275,285]]],["Snacks/drinks",[[162,174]]],["Mine"]];
+function inCat(i){if(cat=="All")return true;if(cat=="Mine")return i>=F.length;const c=CATS.find(x=>x[0]==cat);return !!c&&!!c[1]&&c[1].some(r=>i>=r[0]&&i<=r[1])}
+F.push(
+["Sona masoori rice (white)","1 cup cooked",205,4,0.6,45,0.1,"Everyday white rice: fast carbs. Keep to 1/2 cup, eat the pappu, curry and veggies first, and fill the plate with them."],
+["Boiled rice (parboiled, ukda)","1 cup cooked",205,4,1,44,0.1,"Parboiled rice digests a little slower than raw rice. Still keep to 1/2 to 3/4 cup."],
+["Red / matta rice","1 cup cooked",215,5,3,45,0.4,"More fiber than white rice. A better regular choice."],
+["Godhuma rava (broken wheat) upma","1 cup",200,6,5,35,0.5,"Higher fiber than rice-based tiffins. Add veggies and have it with raita."],
+["Rasam (chaaru)","1 cup",50,2,1,8,0.3,"Light and filling, good before a meal. Watch the salt."],
+["Majjiga pulusu","1 cup",90,4,1,8,2,"Buttermilk curry: light protein. Use low-fat curd."],
+["Vankaya kura (brinjal curry)","1 cup",130,3,5,12,1.5,"Good fiber. Cook with 1 tsp oil."],
+["Sorakaya kura (bottle gourd)","1 cup",90,3,3,10,0.8,"Light, filling, low carb. A great side."],
+["Aratikaya fry (raw banana)","1 cup",190,2,4,32,1.5,"Starchy vegetable, so it counts like a carb. Keep to 1/2 cup."],
+["Pappu charu","1 cup",80,5,2,12,0.5,"Dal rasam: light protein. Good with a small portion of rice."],
+["Egg pulusu (2 eggs)","1 serving",240,13,2,9,3,"That is 2 whole eggs. Use 1 egg with extra gravy, or switch to chicken or fish."],
+["Mutton curry (Telangana)","1 cup",330,26,2,8,8,"High in saturated fat. Keep to 1/2 cup, once a week, with lots of veg."],
+["Gongura mutton","1 cup",340,25,3,8,8,"Tangy and rich. Same advice as mutton curry: small portion, once a week."],
+["Chicken 65","6 pieces",350,26,2,12,5,"Deep-fried. Air-fry or shallow-fry for a lighter version, and eat 3 to 4 pieces."],
+["Mutton biryani","1 cup",450,24,2,48,8,"Rice plus fatty meat. Keep to 1 cup, with raita and salad, occasionally."],
+["Vegetable biryani","1 cup",300,7,3,48,3,"Rice-heavy. Take 1 cup max and add a protein like egg whites or chicken."],
+["Haleem","1 cup",350,25,4,22,7,"High in protein and fiber from grains and dal, but also rich in ghee. A small bowl is good."],
+["Mirchi ka salan","1 cup",220,5,3,12,3,"Peanut and sesame gravy. Tasty, a bit oily, so 1/2 cup is enough."],
+["Bagara baingan","1 cup",240,5,4,15,3.5,"Brinjal in a nut gravy. Keep to 1/2 cup with roti."],
+["Lemon rice (chitrannam)","1 cup",280,5,2,48,2,"Mostly rice. Keep to 1/2 cup and add a protein."],
+["Coconut rice","1 cup",320,5,3,46,7,"Coconut adds saturated fat on top of the rice. Small portion only."],
+["Sarvapindi","1 piece",230,5,2,32,2,"Rice-flour pancake with chana dal and peanuts. Have 1 with a protein."],
+["Kobbari pachadi (coconut chutney)","2 tbsp",60,1,2,3,3.5,"Coconut means saturated fat. Keep to 1 to 2 tbsp."],
+["Irani chai","1 cup",100,3,0,13,2,"The sugar and whole milk add up. Ask for less sugar or have 1 cup."],
+["Double ka meetha","1/2 cup",330,5,1,40,9,"Fried bread soaked in sugar syrup and ghee. A rare treat: 2 or 3 spoonfuls."],
+["Dal makhani","1 cup",330,12,6,28,9,"Cream and butter make it high in saturated fat. Have 1/2 cup, or choose plain dal."],
+["Palak paneer","1 cup",280,15,4,10,8,"Greens are great but paneer and cream add saturated fat. Use less paneer, no cream."],
+["Aloo gobi","1 cup",160,4,4,22,1.5,"Potato makes it starchy. Add extra cauliflower and protein."],
+["Butter naan","1 piece",300,8,2,48,5,"Refined flour and butter. Choose whole wheat roti instead."],
+["Plain paratha","1 piece",200,4,2,28,3,"Oil-cooked. Use whole wheat and a little oil, with dal or sabzi."],
+["Chicken tikka masala","1 cup",340,28,2,14,9,"Cream-based. Choose tandoori or plain chicken curry for your goals, and have this rarely."],
+["Chole bhature","1 plate",700,18,10,85,8,"Fried bread and starch. If you must, have 1 bhatura and plenty of chole."],
+["Paneer tikka","4 pieces",280,16,2,8,8,"Protein but high in saturated fat. Keep to 2 to 3 pieces."],
+["Dhokla","3 pieces",150,6,2,22,0.5,"Steamed gram flour, not fried. A fair snack."],
+["Thepla","1 piece",120,3,2,16,1.5,"Whole wheat with fenugreek. Pair with curd."],
+["Vada pav","1",300,7,3,45,3,"Fried potato in a white bun. A rare treat."],
+["Misal pav","1 plate",450,15,8,55,4,"Sprouts give protein and fiber. Skip the pav or take half."],
+["Macher jhol (fish curry)","1 cup",230,24,2,8,2,"Light fish curry. Great: lean protein and omega-3s."],
+["Appam","1 piece",120,2,0.5,24,1.3,"Fermented rice pancake. Keep to 1 or 2 with a protein stew."],
+["Kerala fish curry","1 cup",260,24,2,8,6,"Coconut raises saturated fat. Keep to 1 cup with veggies."],
+["Avial","1 cup",200,4,5,15,6,"Veggies in coconut. Fiber is good, coconut adds saturated fat."],
+["Medu vada","2 pieces",280,8,3,28,2.5,"Fried. Have 1 and choose idli more often."],
+["Bisi bele bath","1 cup",300,9,6,48,2,"Rice and dal together, with veggies. Keep to 1 cup and add raita."],
+["Filter coffee (with milk)","1 cup",70,2,0,10,1.5,"Sugar adds up over a few cups. Cut it to 1 tsp."],
+["Masala dosa","1",380,8,3,50,4,"Potato and refined batter. Have 1 with sambar, and skip extra oil and butter."],
+["Uttapam","1",250,7,3,38,2.5,"Add veggies on top and pair with sambar."],
+["Spaghetti marinara","1 cup",220,8,3,43,1,"Pasta is fast carbs. Take 1 cup, add chicken or beans and a salad."],
+["Fettuccine Alfredo","1 cup",450,15,2,40,15,"Cream and butter. Very high in saturated fat. Choose marinara instead."],
+["Lasagna","1 piece",420,22,3,38,10,"Cheese-heavy. Have a small piece and a large salad."],
+["Chicken parmesan","1 serving",550,40,3,30,9,"Breaded and cheesy. Ask for grilled chicken with sauce and no extra cheese."],
+["Minestrone soup","1 cup",120,5,4,20,0.5,"Vegetables and beans. A good starter."],
+["Caprese salad","1 serving",250,13,1,5,9,"Fresh mozzarella adds saturated fat. Keep the portion small."],
+["Risotto","1 cup",350,8,1,52,6,"Rice with butter and cheese. A small portion with veggies."],
+["Croissant","1",230,5,2,26,7,"Butter and refined flour. Occasional only."],
+["Shakshuka (2 eggs)","1 serving",260,16,4,12,4,"That is 2 whole eggs in a tomato sauce. Use 1 egg plus extra veg."],
+["Kimchi","1/2 cup",20,1,2,4,0,"Fermented and low calorie. Salty, so keep to a small portion."],
+["Bulgogi (beef)","1 serving",350,28,1,15,5,"Good protein. Eat with lettuce wraps and veggies instead of rice."],
+["Teriyaki chicken","1 serving",330,30,0,22,2,"The sauce is sugary. Ask for it on the side."],
+["Chicken katsu","1 serving",550,30,3,35,4,"Breaded and fried. Choose grilled chicken instead."],
+["Udon noodles","1 bowl",380,12,2,70,0.5,"Heavy on refined noodles. Eat the protein and veggies first."],
+["Tempura","6 pieces",420,12,3,35,3,"Battered and fried. A rare treat."],
+["Edamame","1 cup",190,17,8,14,0.5,"Excellent: protein and fiber. A great snack."],
+["Chicken quesadilla","1",550,30,3,38,12,"Cheese and tortilla. Choose tacos or a burrito bowl instead."],
+["Jerk chicken","1 serving",300,35,0,6,3,"High protein. Skip the skin and pair with veggies."],
+["Rice and peas","1 cup",330,8,6,55,5,"Coconut rice with beans. Keep to 1/2 cup."],
+["Injera with doro wat","1 plate",550,30,8,70,6,"Good protein, but injera is a big carb. Eat the wat first and half the injera."],
+["Seekh kebab (chicken)","2 pieces",250,28,1,3,4,"Lean protein. A good option grilled, with mint chutney and salad."]
+);
+IDEAS.push(
+["1/2 cup Sona masoori, gongura pappu, vankaya kura, majjiga pulusu",[[175,.5],[58,1],[181,1],[180,1]],"m"],
+["Rasam, 1/2 cup Sona masoori, chepala pulusu, sorakaya kura",[[179,1],[175,.5],[62,1],[182,1]],"m"],
+["Godhuma rava upma, raita, egg white omelette",[[178,1],[36,1],[33,1]],"b"],
+["Seekh kebab, mixed veg sabzi, 1 jonna roti",[[241,1],[34,1],[56,1]],"m"]
+);
+F.push(
+["Chicken shish kebab","2 skewers",300,34,0,4,2.5,"Lean grilled protein. Pair with salad, not extra bread."],
+["Kofte (lamb)","3 pieces",320,24,1,4,9,"Tasty but high in saturated fat. Keep to 2 pieces with veggies."],
+["Menemen (2 eggs)","1 serving",230,13,2,8,4,"That is 2 whole eggs in tomato and pepper. Use 1 egg plus extra veg."],
+["Lahmacun","1",250,12,3,30,4,"Thin flatbread with meat. Eat with a big salad and keep to 1."],
+["Mercimek corbasi (lentil soup)","1 cup",150,9,5,22,0.5,"Great: fiber and protein. A good starter."],
+["Paella","1 cup",350,20,2,45,2.5,"Rice-heavy but with protein. Take 1 cup and eat the seafood or chicken first."],
+["Gazpacho","1 cup",100,2,2,12,0.3,"Light and veggie-based. A fine starter."],
+["Tortilla espanola","1 slice",230,9,1.5,14,3,"Eggs and potato in olive oil. Counts as about 1 whole egg. Pair with salad."],
+["Gambas al ajillo (garlic shrimp)","1 serving",220,20,0,2,3,"High protein. Shrimp has some cholesterol but little saturated fat. Go light on the oil."],
+["Chicken adobo","2 pieces",350,30,0,4,5,"Good protein. Remove the skin and go easy on the rice."],
+["Sinigang","1 bowl",220,20,3,12,3,"Sour tamarind soup with protein and veggies. A good pick."],
+["Pancit","1 cup",320,14,3,42,2.5,"Noodles with protein and veg. Take 3/4 cup and add veggies."],
+["Lumpia (fried)","3 pieces",240,8,1,20,3,"Fried rolls. Keep to 2, or choose fresh lumpia."],
+["Tinola","1 bowl",200,22,2,8,2,"Chicken ginger soup. Light and lean, a great choice."],
+["Nasi goreng","1 cup",380,14,2,50,3,"Fried rice with egg. Take 1/2 cup and add veggies and protein."],
+["Gado-gado","1 plate",400,17,9,30,4.5,"Veggies, tofu and peanut sauce. High fiber. Ask for the sauce on the side."],
+["Beef rendang","1 serving",380,30,2,6,12,"Rich coconut sauce makes it high in saturated fat. Keep to a small serving."],
+["Soto ayam","1 bowl",250,22,2,18,2,"Chicken soup with lean protein. Good."],
+["Sri Lankan chicken curry","1 cup",280,26,2,8,6,"Coconut makes it richer. Keep to 1 cup with veggies."],
+["Parippu (Sri Lankan dhal)","1 cup",220,11,7,28,4,"Lentils and coconut milk. High fiber, fine in 1/2 to 1 cup."],
+["String hoppers","3 pieces",210,4,1.5,44,0.5,"Rice noodles: fast carbs. Keep to 2 and have with dhal or chicken."],
+["Kottu roti","1 plate",600,25,5,70,8,"Chopped roti, oil and egg. Heavy. Share it or take half."],
+["Pol sambol","2 tbsp",70,1,2,3,5,"Coconut means saturated fat. Keep to 1 to 2 tbsp."],
+["Chicken momo (steamed)","6 pieces",300,18,2,36,2,"Steamed is a good choice. Add a vegetable side."],
+["Dal bhat set","1 plate",450,17,9,75,2,"Lentils, rice and veg. Cut the rice to 1/2 cup and double the dal and veg."],
+["Sekuwa (grilled meat)","150 g",280,30,0,2,4,"Grilled protein. A very good option."],
+["Mixed grill plate","1 plate",650,50,3,45,8,"High protein. Ask for extra salad and half the rice."],
+["Chicken kabsa","1 cup",400,22,2,50,4,"Rice-heavy. Take 1/2 cup rice and extra chicken and salad."],
+["Fattoush salad","1 bowl",200,4,4,18,2,"Veggies with fried pita. Ask for less pita."],
+["Foul medames","1 cup",220,13,9,32,1,"Fava beans: protein and fiber. A great breakfast."],
+["Baklava","1 piece",230,3,1.5,25,5,"Sugar syrup, butter, and phyllo. A rare treat."],
+["Labneh","1/4 cup",90,5,0,4,4.5,"Protein but saturated fat. Choose the lower-fat version."],
+["Kibbeh (fried)","1 piece",240,10,2,18,5,"Fried meat and bulgur. Keep to 1 piece, or choose baked."],
+["Pulled pork sandwich","1",450,26,2,50,6,"Sugary sauce and a white bun. Eat it open-faced with slaw."],
+["Beef brisket","4 oz",280,26,0,0,9,"Great protein but high in saturated fat. Trim the fat."],
+["BBQ ribs","3 ribs",500,32,0,12,12,"Very high in saturated fat. Share it and add a veggie side."],
+["Fried chicken (with skin)","2 pieces",500,32,1,16,8,"Fried and skin-on. Remove the skin and breading, or choose grilled."],
+["Cornbread","1 piece",200,4,1,30,3,"Fast carbs. Skip it or take half."],
+["Collard greens","1 cup",70,4,5,10,0.5,"A great side: fiber and nutrients."],
+["Coleslaw","1/2 cup",150,1,1.5,14,2,"Creamy dressing adds sugar and fat. Keep to a few spoonfuls."],
+["Baked beans","1/2 cup",190,6,6,36,1,"Fiber but a lot of added sugar. Keep to 1/2 cup."],
+["Shrimp and grits","1 bowl",450,30,3,45,8,"Good protein but rich in butter and cheese. Take a small bowl."],
+["Biscuits and gravy","1 serving",550,12,2,45,12,"High in saturated fat and refined flour. A rare brunch."],
+["Gumbo","1 cup",280,22,3,12,4,"Seafood and sausage in a roux. Skip the rice or take 1/2 cup."]
+);
+IDEAS.push(
+["Chicken shish kebab, lentil soup, salad",[[242,1],[246,1],[19,1]],"m"],
+["Tinola, 1/2 cup rice, veg sabzi",[[255,1],[8,.5],[34,1]],"m"],
+["Foul medames, egg white omelette, pita half",[[271,1],[33,1],[129,.5]],"b"],
+["Sekuwa, dal, salad",[[267,1],[1,1],[19,1]],"m"]
+);
+F.push(
+["Quinoa:rice 60:40 mix (cooked)","1 cup",214,6.4,3.2,41,0.2,"60% quinoa, 40% white rice by cooked volume. More protein and fiber than plain rice. Aim for 1/2 to 1 cup, with protein and veg first."],
+["Quinoa:rice 70:30 mix (cooked)","1 cup",216,6.8,3.7,41,0.2,"70% quinoa, 30% white rice by cooked volume. Even more fiber and protein. A great everyday base."],
+["Quinoa:rice 50:50 mix (cooked)","1 cup",213,6,2.8,42,0.2,"Half and half by cooked volume. A good first step away from plain rice."]
+);
+let wEnd=0,wT=null;
+const wl=()=>{const s=Math.max(0,Math.ceil((wEnd-Date.now())/1000));return "Walking "+Math.floor(s/60)+":"+String(s%60).padStart(2,"0")+" (tap to stop)"};
+function walkCard(d){if(!d.items.length||date!=ds(new Date()))return "";return `<div class="tip"><b>Walk nudge</b>Take a 10 to 15 minute walk within an hour of eating. It lowers the glucose spike from your meal.<div class="row" style="margin-top:8px"><button class="btn" id="wb" onclick="walk()">${wEnd?wl():"Start 10-min walk"}</button><span class="sub">Walks today: ${d.walks||0}</span></div></div>`}
+function walk(){if(wEnd){wEnd=0;clearInterval(wT);render();return}wEnd=Date.now()+6e5;wT=setInterval(()=>{if(Date.now()>=wEnd){clearInterval(wT);wEnd=0;const d=day();d.walks=(d.walks||0)+1;save();try{navigator.vibrate&&navigator.vibrate(400)}catch(e){}render()}else{const b=$("wb");if(b)b.textContent=wl()}},1000);render()}
+function ctot(c){const t={kcal:0,p:0,fib:0,carb:0,sat:0};c.forEach(a=>{const f=F[a[0]];t.kcal+=f[2]*a[1];t.p+=f[3]*a[1];t.fib+=f[4]*a[1];t.carb+=f[5]*a[1];t.sat+=f[6]*a[1]});return t}
+function ideasOpen(){idm=true;const h=new Date().getHours();meal=h<11?"Breakfast":h<16?"Lunch":h<21?"Dinner":"Snacks";drawSheet()}
+function drawIdeas(){const d=day(),t=tot(d.items),T=S.set.t,R={p:Math.max(0,T.p+(d.wo?15:0)-t.p),fib:Math.max(0,T.fib-t.fib),carb:Math.max(0,T.carb-t.carb),sat:Math.max(0,T.sat-t.sat),kcal:Math.max(0,T.kcal-t.kcal)},tag=meal=="Breakfast"?"b":meal=="Snacks"?"s":"m";
+ const sc=IDEAS.map((x,i)=>{const c=ctot(x[1]);return [Math.abs(c.p-Math.min(R.p,45))+2*Math.abs(c.fib-Math.min(R.fib,12))+5*Math.max(0,c.sat-R.sat)+Math.max(0,c.carb-R.carb)+.1*Math.max(0,c.kcal-R.kcal),i,c]}).filter(a=>IDEAS[a[1]][2]==tag).sort((a,b)=>a[0]-b[0]).slice(0,3);
+ $("sheet").innerHTML=`<div class="sheet" onclick="if(event.target==this){idm=false;closeSheet()}"><div><div class="row sp"><h2>Ideas for ${meal}</h2><button class="ghost" onclick="idm=false;closeSheet()">Close</button></div><p class="sub">Left today: about ${Math.round(R.p)} g protein, ${Math.round(R.fib)} g fiber, ${Math.round(R.carb)} g carbs, ${Math.round(R.sat)} g saturated fat.</p>${sc.map(a=>`<div class="card"><b>${IDEAS[a[1]][0]}</b><br><small class="sub">${Math.round(a[2].kcal)} kcal &middot; P ${Math.round(a[2].p)} &middot; Fib ${Math.round(a[2].fib)} &middot; C ${Math.round(a[2].carb)} &middot; Sat ${r1(a[2].sat)}</small><div style="height:8px"></div><button class="btn" onclick="addIdea(${a[1]})">Add all to ${meal}</button></div>`).join("")}</div></div>`}
+function addIdea(i){IDEAS[i][1].forEach((a,k)=>day().items.push({id:Date.now()+k,f:a[0],q:a[1],m:meal}));idm=false;save();closeSheet();render()}
+let ph=null;
+const esc=t=>String(t==null?"":t).replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+const PROMPT='You are a registered dietitian. Identify every food in this meal photo and estimate the visible portion. Return ONLY JSON: {"items":[{"name":string,"portion":string,"kcal":number,"p":number,"fib":number,"carb":number,"sat":number,"tip":string}],"note":string}. p, fib, carb, sat are grams for the visible portion. The person eats Indian curries, rice and quinoa, wants lower blood sugar, lower LDL cholesterol and more muscle. tip is one short sentence on that food. note is one or two sentences on how to improve the whole plate (fiber, protein, rice portion, eating order). If there is no food, return an empty items list.';
+function snap(){const i=document.createElement("input");i.type="file";i.accept="image/*";i.onchange=()=>i.files[0]&&analyze(i.files[0]);i.click()}
+async function shrink(file){const url=URL.createObjectURL(file),im=new Image();await new Promise((r,j)=>{im.onload=r;im.onerror=j;im.src=url});const s=Math.min(1,1024/Math.max(im.width,im.height)),c=document.createElement("canvas");c.width=Math.round(im.width*s);c.height=Math.round(im.height*s);c.getContext("2d").drawImage(im,0,0,c.width,c.height);URL.revokeObjectURL(url);return new Promise(r=>c.toBlob(r,"image/jpeg",.8))}
+async function analyze(file){ph={busy:1};drawSheet();
+ try{const sample=window.claude?await claude.use("sample"):null;if(!sample)throw{code:"none"};
+  const lim=await sample.limits();if(!lim||!lim.images)throw{code:"none"};
+  const blob=await shrink(file);
+  const r=await sample.json(PROMPT,{images:[blob],cache:false});
+  ph={res:(r.items||[]).slice(0,10),note:r.note||""};if(!ph.res.length)ph={err:"I couldn’t spot food in that photo. Try a closer, well-lit shot from above."}
+ }catch(e){ph={err:e&&e.code=="not_granted"?"Access was declined. Allow it when prompted to use photo analysis.":e&&e.code=="none"?"Photo analysis isn’t available in this view. Open the page inside claude.ai.":"Couldn’t read that photo. Try a clearer, closer shot."}}
+ drawSheet()}
+function drawPh(){const s=$("sheet");let h;
+ if(ph.busy)h='<p style="text-align:center;padding:30px 0"><b>Analyzing your photo…</b><br><span class="sub">Estimating portions and macros</span></p>';
+ else if(ph.err)h='<div class="tip"><b>Photo not read</b>'+esc(ph.err)+'</div><button class="ghost" onclick="ph=null;drawSheet()">Back</button>';
+ else h=ph.res.map((x,i)=>`<div class="food" style="display:block"><label style="color:var(--ink);font-size:15px"><input type="checkbox" style="width:auto" ${x.on===false?"":"checked"} onchange="ph.res[${i}].on=this.checked"> <b>${esc(x.name)}</b> <span class="sub">${esc(x.portion)}</span></label><br><small class="sub">${Math.round(+x.kcal||0)} kcal &middot; P ${r1(+x.p||0)} &middot; Fib ${r1(+x.fib||0)} &middot; C ${r1(+x.carb||0)} &middot; Sat ${r1(+x.sat||0)}</small><br><small>${esc(x.tip)}</small></div>`).join("")+`<div class="tip"><b>Dietitian note</b>${esc(ph.note)}</div><p class="sub">These are AI estimates from a photo, so treat them as ballpark. Uncheck anything wrong.</p><div class="row"><button class="ghost" style="flex:1" onclick="ph=null;drawSheet()">Back</button><button class="btn" style="flex:2" onclick="addPh()">Add to ${meal}</button></div>`;
+ s.innerHTML=`<div class="sheet" onclick="if(event.target==this){ph=null;closeSheet()}"><div><div class="row sp"><h2>Photo to ${meal}</h2><button class="ghost" onclick="ph=null;closeSheet()">Close</button></div>${h}</div></div>`}
+function addPh(){ph.res.filter(x=>x.on!==false).forEach((x,k)=>day().items.push({id:Date.now()+k,c:[String(x.name),String(x.portion||"1 serving"),+x.kcal||0,+x.p||0,+x.fib||0,+x.carb||0,+x.sat||0,String(x.tip||"")],q:1,m:meal}));ph=null;save();closeSheet();render()}
+function drawSheet(){if(ph){drawPh();return}if(nf){drawNf();return}if(idm){drawIdeas();return}
+ const s=$("sheet");
+ if(sel===null){
+  const list=F.concat(S.my||[]).map((f,i)=>[f,i]).filter(a=>a[0][0].toLowerCase().includes(q.toLowerCase())&&inCat(a[1]));
+  s.innerHTML=`<div class="sheet" onclick="if(event.target==this)closeSheet()"><div><div class="row sp"><h2>Add to ${meal}</h2><button class="ghost" onclick="closeSheet()">Close</button></div><button class="btn" style="width:100%;margin:10px 0 2px" onclick="snap()">&#128247; Snap or upload a meal photo</button><button class="ghost" style="width:100%;margin:6px 0" onclick="nf=true;drawSheet()">+ New food or recipe</button><div class="scroll" style="display:flex;gap:6px;margin:8px 0;padding-bottom:4px">${CATS.map(c=>`<button class="chip${c[0]==cat?" on":""}" onclick="cat='${c[0]}';drawSheet()">${c[0]}</button>`).join("")}</div><input id="sq" placeholder="Search foods" value="${q}" oninput="q=this.value;drawSheet();$('sq').focus();$('sq').setSelectionRange(q.length,q.length)">${list.map(a=>`<div class="food" onclick="sel=${a[1]};qty=1;drawSheet()"><span>${a[0][0]}<br><small class="sub">${a[0][1]}</small></span><span class="sub">${a[0][2]} kcal &middot; P ${a[0][3]} &middot; F ${a[0][4]}</span></div>`).join("")}</div></div>`;
+ }else{
+  const f=F.concat(S.my||[])[sel];
+  s.innerHTML=`<div class="sheet" onclick="if(event.target==this)closeSheet()"><div><h2>${f[0]}</h2><p class="sub">${f[1]} per 1 serving</p>
+  <div class="row" style="justify-content:center;gap:18px;margin:10px 0"><button class="ghost" onclick="qty=Math.max(.25,qty-.25);drawSheet()">&minus;</button><b style="font-size:24px">${qty}</b><button class="ghost" onclick="qty+=.25;drawSheet()">+</button></div>
+  <div class="sub" style="text-align:center">${Math.round(f[2]*qty)} kcal &middot; Protein ${r1(f[3]*qty)} g &middot; Fiber ${r1(f[4]*qty)} g &middot; Carbs ${r1(f[5]*qty)} g &middot; Sat fat ${r1(f[6]*qty)} g</div>
+  <div class="tip"><b>Dietitian note</b>${f[7]}${qty>=2&&f[5]>=30?" You picked a large serving. Consider halving it.":""}</div>
+  <div class="row"><button class="ghost" style="flex:1" onclick="sel=null;drawSheet()">Back</button><button class="btn" style="flex:2" onclick="addIt()">Add to ${meal}</button></div></div></div>`;
+ }
+}
+function addIt(){const A=F.concat(S.my||[]);day().items.push(sel<F.length?{id:Date.now(),f:sel,q:qty,m:meal}:{id:Date.now(),c:A[sel],q:qty,m:meal});save();closeSheet();render()}
+document.querySelector("nav").onclick=e=>{if(e.target.dataset.t){tab=e.target.dataset.t;render();scrollTo(0,0)}};
+render();
+</script></body></html>
